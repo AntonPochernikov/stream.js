@@ -47,7 +47,7 @@ const ref = (s, n = 0) => {
   return ref(tail(s), n - 1);
 };
 
-// unlike array map
+// unlike array filter
 // stream map will accept unlimited amount of streams
 const map = (iteratee, ...streamArgs) => {
   if (streamArgs.some(isEmpty) || streamArgs.length === 0) {
@@ -78,7 +78,7 @@ const filter = (predicate, s) => {
 };
 
 // provides a way to iterative stream reduction
-// returns a stream that will contain accumulator value of every reduce iteration
+// returns a stream that will contain accumulated value of every reduce iteration
 const reduce = (iteratee, s, acc) => {
   if (isEmpty(s)) {
     return acc;
@@ -109,7 +109,7 @@ const mulStreams = (...streams) => map(
   ...streams,
 );
 
-// take n elements of the stream and return as an array
+// take n elements of the stream and return them as an array
 const take = (s, n) => {
   const iter = (acc, s, coounter) => {
     if (counter === 0 || isEmpty(s)) {
