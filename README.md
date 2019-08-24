@@ -1,2 +1,3 @@
-# stream.js
-streams for javascript implementation
+# Stream.js
+
+Implementation of streams in JavaScript
