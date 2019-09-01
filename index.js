@@ -9,29 +9,30 @@
 // that will evaluate the next element of the stream that actually is a stream too.
 
 // UTILS
-// eval rest of the stream
-const evaluate = f => f();
 // we are using memoized evaluations for stream-tail
 const memoize = f => {
   let isDone = false;
-  let value = null;
+  let result = null;
 
   return (...args) => {
     if (isDone) {
-      return value;
+      return result;
     }
 
-    const result = f(...args);
+    const value = f(...args);
     isDone = true;
-    value = result;
+    result = value;
     return result;
   };
 };
+const delay = exp => memoize(exp);
+// eval rest of the stream
+const evaluate = f => f();
 
 // CONSTRUCTOR AND SELECTORS
-const stream = (head, tail) => f => f(head, memoize(tail));
+const stream = (head, tail) => f => f(head, tail);
 const head = s => s(x => x);
-const tail = s => s(_, y => evaluate(y));
+const tail = s => s((_, y) => evaluate(y));
 const theEmptyStream = Symbol('THE_EMPTY_STREAM');
 const isEmpty = s => s === theEmptyStream;
 
@@ -57,7 +58,7 @@ const map = (iteratee, ...streamArgs) => {
 
   return stream(
     iteratee(...args),
-    () => map(iteratee, ...streamArgs.map(tail)),
+    delay(() => map(iteratee, ...streamArgs.map(tail))),
   );
 };
 
@@ -71,10 +72,10 @@ const filter = (predicate, s) => {
   if (predicate(first)) {
     return stream(
       first,
-      () => filter(predicate, tail(s)),
+      delay(() => filter(predicate, tail(s))),
     );
   }
-  return filter(prdicate, tail(s));
+  return filter(predicate, tail(s));
 };
 
 // provides a way to iterative stream reduction
@@ -86,11 +87,11 @@ const reduce = (iteratee, s, acc) => {
 
   return stream(
     acc,
-    () => reduce(
+    delay(() => reduce(
       iteratee,
       tail(s),
       iteratee(acc, head(s)),
-    ),
+    )),
   );
 };
 
@@ -111,7 +112,7 @@ const mulStreams = (...streams) => map(
 
 // take n elements of the stream and return them as an array
 const take = (s, n) => {
-  const iter = (acc, s, coounter) => {
+  const iter = (acc, s, counter) => {
     if (counter === 0 || isEmpty(s)) {
       return acc;
     }
@@ -141,12 +142,12 @@ const merge = (s1, s2) => {
   const h1 = head(s1);
   const h2 = head(s2);
   if (h1 > h2) {
-    return stream(h2, () => merge(s1, tail(s2)));
+    return stream(h2, delay(() => merge(s1, tail(s2))));
   }
   if (h1 < h2) {
-    return stream(h1, () => merge(tail(s1), s2));
+    return stream(h1, delay(() => merge(tail(s1), s2)));
   }
-  return stream(h1, () => merge(tail(s1), tail(s2)));
+  return stream(h1, delay(() => merge(tail(s1), tail(s2))));
 };
 
 
@@ -192,12 +193,12 @@ class Iterator {
 // IMPLEMENTING SEQUENCES USING STREAMS
 
 // integers implementation
-const integersFrom = n => stream(n, () => integersFrom(n + 1));
+const integersFrom = n => stream(n, delay(() => integersFrom(n + 1)));
 const integers = integersFrom(0);
 
 // another way to implement integers
-const ones = stream(1, () => ones);
-const ints = stream(0, () => addStreams(ones, ints));
+const ones = stream(1, delay(() => ones));
+const ints = stream(0, delay(() => addStreams(ones, ints)));
 
 // factorial implementation in terms of reduce
 const fact = reduce(
@@ -209,24 +210,24 @@ const fact = reduce(
 // factorial implementation in terms of mulStreams
 const factorial = stream(
   1,
-  () => mulStreams(tail(ints), factorial),
+  delay(() => mulStreams(tail(ints), factorial)),
 );
 
 // stream of fibonacci numbers
 const fibs = stream(
   0,
-  () => stream(
+  delay(() => stream(
     1,
-    () => addStreams(fibs, tail(fibs)),
-  ),
+    delay(() => addStreams(fibs, tail(fibs))),
+  )),
 );
 
 // stream of primes
 const sieve = s => stream(
   head(s),
-  () => filter(
+  delay(() => filter(
     x => x % head(s) !== 0,
     tail(s),
-  ),
+  )),
 );
 const primes = sieve(integersFrom(2));
