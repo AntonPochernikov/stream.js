@@ -19,20 +19,19 @@ const memoize = f => {
       return result;
     }
 
-    const value = f(...args);
+    result = f(...args);
     isDone = true;
-    result = value;
     return result;
   };
 };
 const delay = exp => memoize(exp);
 // eval rest of the stream
-const evaluate = f => f();
+const force = f => f();
 
 // CONSTRUCTOR AND SELECTORS
 const stream = (head, tail) => f => f(head, tail);
 const head = s => s(x => x);
-const tail = s => s((_, y) => evaluate(y));
+const tail = s => s((_, y) => force(y));
 const theEmptyStream = Symbol('THE_EMPTY_STREAM');
 const isEmpty = s => s === theEmptyStream;
 
@@ -48,7 +47,7 @@ const ref = (s, n = 0) => {
   return ref(tail(s), n - 1);
 };
 
-// unlike array filter
+// unlike array map
 // stream map will accept unlimited amount of streams
 const map = (iteratee, ...streamArgs) => {
   if (streamArgs.some(isEmpty) || streamArgs.length === 0) {
@@ -62,7 +61,7 @@ const map = (iteratee, ...streamArgs) => {
   );
 };
 
-// works like array map
+// works like array filter
 const filter = (predicate, s) => {
   if (isEmpty(s)) {
     return theEmptyStream;
