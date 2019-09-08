@@ -10,7 +10,7 @@
 
 // UTILS
 // we are using memoized evaluations for stream-tail
-const memoize = f => {
+const memoize = (f) => {
   let isDone = false;
   let result = null;
 
@@ -25,11 +25,11 @@ const memoize = f => {
   };
 };
 const delay = exp => memoize(exp);
-// eval rest of the stream
+// evaluate rest of the stream
 const force = f => f();
 
 // CONSTRUCTOR AND SELECTORS
-const stream = (head, tail) => f => f(head, tail);
+const stream = (head, tail) => selector => selector(head, tail);
 const head = s => s(x => x);
 const tail = s => s((_, y) => force(y));
 const theEmptyStream = Symbol('THE_EMPTY_STREAM');
