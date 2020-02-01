@@ -29,11 +29,16 @@ const delay = exp => memoize(exp);
 const force = f => f();
 
 // CONSTRUCTOR AND SELECTORS
-const stream = (head, tail) => selector => selector(head, tail);
+const stream = (head, tail) => {
+  const select = selector => selector(head, tail);
+  select.isStream = true;
+  return select;
+};
 const head = s => s(x => x);
 const tail = s => s((_, y) => force(y));
 const theEmptyStream = Symbol('THE_EMPTY_STREAM');
 const isEmpty = s => s === theEmptyStream;
+const isStream = value => typeof value === 'object' && !!value.isStream;
 
 // OPERATIONS
 // get nth element of stream
@@ -121,12 +126,15 @@ const take = (s, n) => {
 };
 
 // returns rest of the stream from nth element
-const slice = (s, from = 0) => {
+const slice = (s, from, to) => {
   if (from === 0 || isEmpty(s)) {
     return s;
   }
 
-  return slice(tail(s), from - 1);
+  return stream(
+    head(s),
+    delay(() => slice(tail(s), from - 1)),
+  );
 };
 
 // merge two stream of comparable elements
@@ -158,36 +166,6 @@ const toString = (s, n) => {
   const stringified = take(s, n).reduce((acc, item) => `${acc}${item} `, '');
   return `< ${stringified}>`;
 };
-
-// ITERATOR WRAPPER
-// TODO: improve iterator wrapper
-class Iterator {
-  constructor(s, count = 1) {
-    this.stream = s;
-    this.count = count;
-  }
-
-  getStream() {
-    return this.stream;
-  }
-
-  take(n) {
-    this.count = n;
-    return this;
-  }
-
-  skip(n) {
-    this.stream = slice(this.stream, n);
-    return this;
-  }
-
-  iter() {
-    const result = take(this.stream, this.count);
-    this.stream = slice(this.stream, this.count);
-    return result;
-  }
-}
-
 
 // IMPLEMENTING SEQUENCES USING STREAMS
 
@@ -230,3 +208,59 @@ const sieve = s => stream(
   )),
 );
 const primes = sieve(integersFrom(2));
+
+// ITERATOR WRAPPER
+// TODO: improve iterator wrapper
+class Iterator {
+  constructor(s) {
+    this.value = s;
+  }
+
+  map(proc) {
+    return map(proc, this.value);
+  }
+
+  filter(proc) {
+    return filter(proc, this.value);
+  }
+
+  reduce(proc, initial) {
+    return reduce(proc, initial, this.value);
+  }
+
+  value() {
+    if (isStream(this.value)) {
+      return streamToArr(this.value);
+    }
+    return this.value;
+  }
+}
+
+function arrToStream(arr) {
+  if (arr.length === 0) {
+    return theEmptyStream;
+  }
+  const [first, ...rest] = arr;
+  return stream(first, delay(() => arrToStream(rest)));
+}
+
+function streamToArr(s) {
+  if (isEmpty(s)) {
+    return [];
+  }
+  const first = head(s);
+  const rest = tail(s);
+  return [first, ...streamToArr(rest)];
+}
+
+function wrap(value) {
+  if (Array.isArray(value)) {
+    const s = arrToStream(value);
+    return new Iterator(s);
+  }
+  throw new Error('Wrapper used on non-array value');
+}
+const square = n => n ** 2;
+const result = wrap([1, 2, 3]);
+
+console.log(result.value());
