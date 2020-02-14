@@ -38,7 +38,7 @@ const head = s => s(x => x);
 const tail = s => s((_, y) => force(y));
 const theEmptyStream = Symbol('THE_EMPTY_STREAM');
 const isEmpty = s => s === theEmptyStream;
-const isStream = value => typeof value === 'object' && !!value.isStream;
+const isStream = value => typeof value === 'function' && !!value.isStream;
 
 // OPERATIONS
 // get nth element of stream
